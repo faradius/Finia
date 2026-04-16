@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "906308512787",
+    "project_id": "finia-db203",
+    "storage_bucket": "finia-db203.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:906308512787:android:1d59f1844ec386274923e6",
+        "android_client_info": {
+          "package_name": "com.devmastercrack.finia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmY5KcRlQv6BAM-4Z6EALt_AOaazkYl-o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
