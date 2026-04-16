@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.google.firebase.firebase.perf)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.firebase.appdistribution)
 }
 
 android {

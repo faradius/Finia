@@ -13,6 +13,7 @@ espressoCore = "3.7.0"
 googleGmsGoogleServices = "4.4.4"
 googleFirebaseCrashlytics = "3.0.7"
 googleFirebaseFirebasePerf = "2.0.2"
+googleFirebaseAppdistribution = "5.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,3 +48,4 @@ google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.
 google-firebase-firebase-perf = { id = "com.google.firebase.firebase-perf", version.ref = "googleFirebaseFirebasePerf" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+google-firebase-appdistribution = { id = "com.google.firebase.appdistribution", version.ref = "googleFirebaseAppdistribution" }
