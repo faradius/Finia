@@ -1,57 +1,47 @@
 package com.devmastercrack.finia.core.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val FiniaLightColorScheme = lightColorScheme(
+    primary = FiniaColors.Accent,
+    onPrimary = FiniaColors.White,
+    primaryContainer = FiniaColors.AccentSoft,
+    onPrimaryContainer = FiniaColors.Accent,
+    error = FiniaColors.Danger,
+    onError = FiniaColors.White,
+    errorContainer = FiniaColors.DangerSoft,
+    onErrorContainer = FiniaColors.Danger,
+    background = FiniaColors.ScreenBg,
+    onBackground = FiniaColors.TextPrimary,
+    surface = FiniaColors.White,
+    onSurface = FiniaColors.TextPrimary,
+    surfaceVariant = FiniaColors.SurfaceNeutral,
+    onSurfaceVariant = FiniaColors.TextSecondary,
+    outline = FiniaColors.BorderSubtle,
+    outlineVariant = FiniaColors.BorderSubtle2,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+// The design spec is hifi light-only; keep dark mode non-broken without inventing new tokens.
+private val FiniaDarkColorScheme = darkColorScheme(
+    primary = FiniaColors.Accent,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    error = FiniaColors.Danger,
+    onError = Color.White,
 )
 
 @Composable
 fun FiniaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    darkTheme: Boolean = androidx.compose.foundation.isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
+    val colorScheme = if (darkTheme) FiniaDarkColorScheme else FiniaLightColorScheme
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

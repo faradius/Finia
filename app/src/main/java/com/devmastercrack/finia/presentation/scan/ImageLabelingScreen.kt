@@ -1,4 +1,7 @@
-package com.devmastercrack.finia.presentation
+package com.devmastercrack.finia.presentation.scan
+
+// Parked prototype (ticket OCR + Gemini scan) — not wired into navigation yet.
+// Candidate to power the camera quick-action in the Add Transaction sheet later.
 
 import android.Manifest
 import android.content.Context
