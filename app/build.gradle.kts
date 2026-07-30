@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.perf)
     implementation(libs.firebase.ai)
+    implementation(libs.firebase.storage)
 
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)
@@ -91,6 +92,7 @@ dependencies {
 
     // ML Kit
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.image.labeling)
 
     // Image Loading (Coil)
     implementation(libs.coil.compose)
