@@ -71,6 +71,12 @@ fun AccountDetailSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifi
     val transferCount = detailTx.count { it.categoria == "Transferencia" }
     val accent = if (acc.isCredit) Color(0xFF9C7326) else acc.cardBg.solidOrFallback()
 
+    // Drag progress is purely visual feedback for this one sheet, so it stays local Compose
+    // state instead of round-tripping through the shared ViewModel StateFlow on every pixel of
+    // movement — that would force every screen holding the (unstable) FiniaUiState to be
+    // considered for recomposition on each drag delta.
+    var dragY by remember { mutableFloatStateOf(0f) }
+
     Box(modifier.fillMaxSize()) {
         Box(
             Modifier
@@ -81,19 +87,20 @@ fun AccountDetailSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifi
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
-                .offset { IntOffset(0, state.sheetDragY.roundToInt()) }
+                .offset { IntOffset(0, dragY.roundToInt()) }
                 .fillMaxWidth()
                 .fillMaxHeight(0.78f)
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(Color.White)
                 .pointerInput(Unit) {
-                    var accum = 0f
                     detectVerticalDragGestures(
-                        onDragEnd = { vm.onSheetDragEnd() },
+                        onDragEnd = {
+                            if (dragY > 90f) vm.closeAccountConfig()
+                            dragY = 0f
+                        },
                         onVerticalDrag = { change, dragAmount ->
                             change.consume()
-                            accum += dragAmount
-                            vm.onSheetDragBy(accum)
+                            dragY = maxOf(0f, dragY + dragAmount)
                         },
                     )
                 }

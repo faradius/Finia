@@ -134,7 +134,7 @@ fun HomeScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Mod
                 modifier = Modifier.padding(top = 20.dp, bottom = 8.dp, start = 20.dp, end = 20.dp),
             )
         }
-        items(state.recurring) { r ->
+        items(state.recurring, key = { it.nombre }) { r ->
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,

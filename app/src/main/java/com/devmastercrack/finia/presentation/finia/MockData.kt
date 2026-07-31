@@ -80,7 +80,7 @@ object MockData {
 
     val initialAiMessages = listOf(
         ChatMessage(
-            from = ChatSender.AI, type = ChatMessageType.TEXT, time = "11:30",
+            id = 1, from = ChatSender.AI, type = ChatMessageType.TEXT, time = "11:30",
             text = "Hola Alex 👋 soy FinanIA, tu asesor financiero. Puedo mostrarte tu resumen del mes, próximos pagos o un análisis de tus gastos. ¿Qué revisamos?",
         ),
     )

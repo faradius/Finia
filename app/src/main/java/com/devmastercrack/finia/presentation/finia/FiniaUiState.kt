@@ -112,7 +112,6 @@ data class FiniaUiState(
     val accountConfigDenomValue: Double = 0.0,
     val accountReajusteValue: String = "",
     val creditPrimaryView: CreditPrimaryView = CreditPrimaryView.CAPACIDAD,
-    val sheetDragY: Float = 0f,
 
     // Account detail calendar (corte/pago)
     val accCalOpen: Boolean = false,
@@ -130,4 +129,5 @@ data class FiniaUiState(
     val aiInput: String = "",
     val aiTyping: Boolean = false,
     val aiMessages: List<ChatMessage> = MockData.initialAiMessages,
+    val nextAiMessageId: Int = 2,
 )

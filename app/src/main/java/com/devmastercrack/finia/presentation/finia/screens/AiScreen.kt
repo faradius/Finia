@@ -93,7 +93,7 @@ fun AiScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modif
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            items(state.aiMessages) { msg ->
+            items(state.aiMessages, key = { it.id }) { msg ->
                 MessageRow(msg, netWorthValue, ingresos, gastos, state.recurring)
             }
             if (state.aiTyping) {

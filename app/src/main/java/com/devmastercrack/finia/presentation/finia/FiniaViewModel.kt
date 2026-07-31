@@ -85,11 +85,11 @@ class FiniaViewModel : ViewModel() {
     // ───────────────────────────── Account detail sheet ─────────────────────────────
 
     fun openAccountDetail(id: String) = _state.update {
-        it.copy(accountConfigOpen = id, accountEditMode = false, sheetDragY = 0f)
+        it.copy(accountConfigOpen = id, accountEditMode = false)
     }
 
     fun closeAccountConfig() = _state.update {
-        it.copy(accountConfigOpen = null, accountEditMode = false, sheetDragY = 0f)
+        it.copy(accountConfigOpen = null, accountEditMode = false)
     }
 
     fun switchAccountPrev() = _state.update { s ->
@@ -176,12 +176,6 @@ class FiniaViewModel : ViewModel() {
     }
     fun toggleTipoPicker() = _state.update { it.copy(tipoPickerOpen = !it.tipoPickerOpen, accountEmojiPickerOpen = false) }
     fun selectTipo(tipo: AccountType) = _state.update { it.copy(accountConfigTipo = tipo, tipoPickerOpen = false) }
-
-    fun onSheetDragBy(dy: Float) = _state.update { it.copy(sheetDragY = maxOf(0f, dy)) }
-    fun onSheetDragEnd() = _state.update { s ->
-        if (s.sheetDragY > 90f) s.copy(accountConfigOpen = null, accountEditMode = false, sheetDragY = 0f)
-        else s.copy(sheetDragY = 0f)
-    }
 
     // Corte / pago calendar (inside account detail edit mode)
     fun openAccCal(field: AccCalField) = _state.update {
@@ -427,28 +421,32 @@ class FiniaViewModel : ViewModel() {
     fun sendAiMessage(presetText: String? = null) {
         val text = (presetText ?: _state.value.aiInput).trim()
         if (text.isBlank()) return
-        val userMsg = ChatMessage(ChatSender.USER, ChatMessageType.TEXT, "Ahora", text)
-        _state.update { it.copy(aiMessages = it.aiMessages + userMsg, aiInput = "", aiTyping = true) }
+        _state.update { s ->
+            val userMsg = ChatMessage(s.nextAiMessageId, ChatSender.USER, ChatMessageType.TEXT, "Ahora", text)
+            s.copy(aiMessages = s.aiMessages + userMsg, aiInput = "", aiTyping = true, nextAiMessageId = s.nextAiMessageId + 1)
+        }
         viewModelScope.launch {
             delay(900)
-            _state.update { it.copy(aiMessages = it.aiMessages + buildAiReply(text), aiTyping = false) }
+            _state.update { s ->
+                s.copy(aiMessages = s.aiMessages + buildAiReply(text, s.nextAiMessageId), aiTyping = false, nextAiMessageId = s.nextAiMessageId + 1)
+            }
         }
     }
 
-    private fun buildAiReply(text: String): ChatMessage {
+    private fun buildAiReply(text: String, id: Int): ChatMessage {
         val t = text.lowercase()
         val time = "Ahora"
         return when {
             t.contains("cómo voy") || t.contains("como voy") || t.contains("resumen") ->
-                ChatMessage(ChatSender.AI, ChatMessageType.SUMMARY, time)
+                ChatMessage(id, ChatSender.AI, ChatMessageType.SUMMARY, time)
             t.contains("gasto más") || t.contains("analiz") ->
-                ChatMessage(ChatSender.AI, ChatMessageType.ANALYSIS, time)
+                ChatMessage(id, ChatSender.AI, ChatMessageType.ANALYSIS, time)
             t.contains("ahorr") || t.contains("presupuesto") ->
-                ChatMessage(ChatSender.AI, ChatMessageType.TIP, time)
+                ChatMessage(id, ChatSender.AI, ChatMessageType.TIP, time)
             t.contains("pago") ->
-                ChatMessage(ChatSender.AI, ChatMessageType.PAYMENTS, time)
+                ChatMessage(id, ChatSender.AI, ChatMessageType.PAYMENTS, time)
             else -> ChatMessage(
-                ChatSender.AI, ChatMessageType.TEXT, time,
+                id, ChatSender.AI, ChatMessageType.TEXT, time,
                 "Puedo mostrarte tu resumen del mes, próximos pagos, un análisis de gastos o consejos para ahorrar. ¿Qué te gustaría revisar?",
             )
         }
