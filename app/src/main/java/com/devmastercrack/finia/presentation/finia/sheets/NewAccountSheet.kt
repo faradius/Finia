@@ -19,9 +19,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +38,6 @@ import com.devmastercrack.finia.core.theme.FiniaText
 import com.devmastercrack.finia.core.theme.NewAccountSwatches
 import com.devmastercrack.finia.presentation.finia.FiniaUiState
 import com.devmastercrack.finia.presentation.finia.FiniaViewModel
-import com.devmastercrack.finia.presentation.finia.components.ScrimSheetHost
 import com.devmastercrack.finia.presentation.finia.components.SheetHandle
 import com.devmastercrack.finia.presentation.finia.model.AccountType
 import com.devmastercrack.finia.presentation.finia.model.CardNetwork
@@ -44,14 +46,23 @@ import com.devmastercrack.finia.presentation.finia.util.fmt
 import com.devmastercrack.finia.presentation.finia.util.formatThousands
 import com.devmastercrack.finia.presentation.finia.util.num
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewAccountSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modifier) {
     val isCredit = state.newAccountTipo == AccountType.CREDIT
     val isCardType = state.newAccountTipo == AccountType.DEBIT || isCredit
     val usadoOverCapacidad = isCredit && num(state.newAccountUsado) > num(state.newAccountCapacidad)
     val disabled = state.newAccountName.isBlank() || usadoOverCapacidad
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ScrimSheetHost(onDismiss = vm::closeNewAccountSheet, modifier = modifier) {
+    ModalBottomSheet(
+        onDismissRequest = vm::closeNewAccountSheet,
+        sheetState = sheetState,
+        modifier = modifier,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = null,
+    ) {
         Column(Modifier.fillMaxWidth()) {
             Column(
                 Modifier
@@ -59,7 +70,7 @@ fun NewAccountSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier 
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SheetHandle() }
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), contentAlignment = Alignment.Center) { SheetHandle() }
                 Text("Nueva cuenta", style = FiniaText.SheetTitle, color = FiniaColors.TextPrimary, modifier = Modifier.padding(bottom = 14.dp))
 
                 Text("Tipo de cuenta", style = FiniaText.Label.copy(fontSize = 12.sp), color = FiniaColors.TextSecondary, modifier = Modifier.padding(bottom = 6.dp))

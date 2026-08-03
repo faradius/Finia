@@ -1,6 +1,6 @@
 package com.devmastercrack.finia.presentation.finia.model
 
-enum class TxFlow { GASTO, INGRESO }
+enum class TxFlow { GASTO, INGRESO, TRANSFERENCIA }
 
 data class TransactionForm(
     val monto: String = "",

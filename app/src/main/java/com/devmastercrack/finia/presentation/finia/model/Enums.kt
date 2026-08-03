@@ -18,3 +18,7 @@ enum class AccCalField { CORTE, PAGO }
 enum class CategoryConfidence { HIGH, LOW }
 
 enum class CategoryOrigin { AUTO, MANUAL }
+
+/** Which list "Pendientes y alertas" shows below: tapping the Me deben/Pagos próximos cards
+ * swaps between them, same idea as HomeScreen's Ingresos/Gastos flow filter. */
+enum class HomeAlertFilter { DEUDAS, PAGOS }

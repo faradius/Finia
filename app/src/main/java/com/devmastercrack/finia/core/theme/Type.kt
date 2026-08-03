@@ -3,6 +3,7 @@ package com.devmastercrack.finia.core.theme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -59,5 +60,8 @@ object FiniaText {
     val NavLabel = TextStyle(fontFamily = Roboto, fontWeight = FontWeight.Medium, fontSize = 10.sp)
     val Button = TextStyle(fontFamily = Roboto, fontWeight = FontWeight.Bold, fontSize = 15.sp)
     val ButtonSmall = TextStyle(fontFamily = Roboto, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-    val VisaMark = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, letterSpacing = 0.5.sp)
+    // Closer to the real Visa wordmark's slant/weight than an upright serif label, without
+    // pulling in the actual trademarked artwork — italic + heavy sans-serif is the two traits
+    // that read as "Visa" at a glance.
+    val VisaMark = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, fontSize = 19.sp, letterSpacing = (-0.3).sp)
 }

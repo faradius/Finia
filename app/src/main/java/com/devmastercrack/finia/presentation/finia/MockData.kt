@@ -64,6 +64,33 @@ object MockData {
         Transaction(7, "Cobro a Mateo", "Otros", "wallet", 300.0, "🤝", "20 jul"),
         Transaction(8, "Depósito ahorro", "Otros", "ahorro", 2000.0, "🐷", "18 jul"),
         Transaction(9, "Cine", "Ocio", "debito", -280.0, "🎬", "18 jul"),
+        // Extra seed data for design testing: every account, every default category, mixed
+        // income/expense, varying description lengths (for truncation/overflow checks), and
+        // enough rows across several date groups to actually exercise the transaction list's
+        // own scroll.
+        Transaction(10, "Renta", "Hogar", "debito", -9000.0, "🏠", "18 jul"),
+        Transaction(11, "Sueldo quincenal", "Trabajo", "debito", 15000.0, "💼", "15 jul"),
+        Transaction(12, "Farmacia del Ahorro", "Salud", "wallet", -340.0, "💊", "15 jul"),
+        Transaction(13, "Spotify", "Ocio", "credito", -129.0, "🎵", "15 jul"),
+        Transaction(14, "Tacos El Güero con los compañeros de la oficina", "Comida", "wallet", -210.0, "🌮", "14 jul"),
+        Transaction(15, "Transferencia a ahorro", "Otros", "ahorro", 1500.0, "💰", "14 jul"),
+        Transaction(16, "Luz CFE", "Hogar", "debito", -480.0, "💡", "12 jul"),
+        Transaction(17, "Gimnasio", "Salud", "debito", -550.0, "🏋️", "12 jul"),
+        Transaction(18, "Cliente - proyecto web", "Trabajo", "wallet", 4500.0, "💻", "10 jul"),
+        Transaction(19, "Concierto", "Ocio", "credito", -1200.0, "🎤", "10 jul"),
+        Transaction(20, "Estacionamiento", "Transporte", "wallet", -60.0, "🅿️", "9 jul"),
+        Transaction(21, "Material de oficina", "Trabajo", "credito", -350.0, "🖇️", "9 jul"),
+        Transaction(22, "Doctor consulta", "Salud", "wallet", -700.0, "🩺", "8 jul"),
+        Transaction(23, "Muebles para la sala", "Hogar", "credito", -3200.0, "🛋️", "8 jul"),
+        Transaction(24, "Desayuno con mi mamá", "Comida", "wallet", -180.0, "🥞", "6 jul"),
+        Transaction(25, "Metro tarjeta recarga", "Transporte", "wallet", -100.0, "🚇", "6 jul"),
+        Transaction(26, "Fiesta de cumpleaños de Sofía", "Ocio", "credito", -650.0, "🎂", "5 jul"),
+        Transaction(27, "Interés generado ahorro", "Otros", "ahorro", 85.0, "📈", "5 jul"),
+        Transaction(28, "Agua embotellada", "Hogar", "wallet", -90.0, "💧", "4 jul"),
+        Transaction(29, "Reembolso de Carlos", "Otros", "wallet", 450.0, "🤝", "4 jul"),
+        Transaction(30, "Pizza para toda la familia el fin de semana", "Comida", "credito", -540.0, "🍕", "2 jul"),
+        Transaction(31, "Bono de productividad", "Trabajo", "debito", 3000.0, "🎯", "1 jul"),
+        Transaction(32, "Gasolina viaje a la playa", "Transporte", "credito", -950.0, "⛽", "1 jul"),
     )
 
     val debts = listOf(

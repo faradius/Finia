@@ -71,16 +71,51 @@ class FiniaViewModel : ViewModel() {
     fun markAllNotifsRead() = _state.update { s ->
         s.copy(notifItems = s.notifItems.map { it.copy(unread = false) })
     }
+    fun homePrevMonth() = _state.update { it.copy(homeScreenMonthOffset = it.homeScreenMonthOffset - 1) }
+    fun homeNextMonth() = _state.update { if (it.homeScreenMonthOffset < 0) it.copy(homeScreenMonthOffset = it.homeScreenMonthOffset + 1) else it }
+    fun toggleHomeMonthPicker() = _state.update { it.copy(homeMonthPickerOpen = !it.homeMonthPickerOpen) }
+    fun selectHomeMonthOffset(offset: Int) = _state.update { it.copy(homeScreenMonthOffset = offset, homeMonthPickerOpen = false) }
+    fun toggleHomeScreenFlowFilter(flow: TxFlow) = _state.update {
+        it.copy(homeScreenFlowFilter = if (it.homeScreenFlowFilter == flow) null else flow)
+    }
+    fun setHomeAlertFilter(filter: com.devmastercrack.finia.presentation.finia.model.HomeAlertFilter) =
+        _state.update { it.copy(homeAlertFilter = filter) }
+
+    // Swipe-to-delete on a transaction row opens this confirmation instead of deleting right
+    // away — nothing is removed from recentTx unless the user explicitly confirms.
+    fun requestDeleteTx(id: Int) = _state.update { it.copy(deleteTxPending = id) }
+    fun cancelDeleteTx() = _state.update { it.copy(deleteTxPending = null) }
+    fun confirmDeleteTx() = _state.update { s ->
+        val id = s.deleteTxPending ?: return@update s
+        s.copy(recentTx = s.recentTx.filterNot { it.id == id }, deleteTxPending = null)
+    }
+
+    fun openTxDetail(id: Int) = _state.update { it.copy(txDetailOpen = id) }
+    fun closeTxDetail() = _state.update { it.copy(txDetailOpen = null) }
 
     // ───────────────────────────── Accounts screen ─────────────────────────────
 
     fun setAccountTypeFilter(filter: AccountTypeFilter) =
-        _state.update { it.copy(accountTypeFilter = filter, activeAccountIdx = 0) }
+        _state.update { it.copy(accountTypeFilter = filter, activeAccountIdx = 0, homeCategoryFilter = "Todo") }
 
-    fun setActiveAccountIdx(idx: Int) = _state.update { it.copy(activeAccountIdx = idx) }
+    // Each account has its own set of categories, so a filter chip selected for one account may
+    // not even exist for the next — always land back on "Todo" (always the first chip) rather
+    // than carrying a selection over that might no longer apply.
+    fun setActiveAccountIdx(idx: Int) = _state.update { it.copy(activeAccountIdx = idx, homeCategoryFilter = "Todo") }
 
     fun acctPrevMonth() = _state.update { it.copy(acctMonthOffset = it.acctMonthOffset - 1) }
     fun acctNextMonth() = _state.update { if (it.acctMonthOffset < 0) it.copy(acctMonthOffset = it.acctMonthOffset + 1) else it }
+    fun toggleAcctMonthPicker() = _state.update { it.copy(acctMonthPickerOpen = !it.acctMonthPickerOpen) }
+    fun selectAcctMonthOffset(offset: Int) = _state.update { it.copy(acctMonthOffset = offset, acctMonthPickerOpen = false) }
+
+    fun showPremiumLocked() = _state.update { it.copy(snackbar = "Disponible en la versión Premium 👑") }
+
+    // Closing search also clears the query so reopening it later doesn't show stale results.
+    fun toggleAcctSearch() = _state.update {
+        if (it.acctSearchOpen) it.copy(acctSearchOpen = false, acctSearchQuery = "") else it.copy(acctSearchOpen = true)
+    }
+    fun onAcctSearchQueryChange(value: String) = _state.update { it.copy(acctSearchQuery = value) }
+    fun clearSnackbar() = _state.update { it.copy(snackbar = null) }
 
     // ───────────────────────────── Account detail sheet ─────────────────────────────
 
@@ -97,7 +132,7 @@ class FiniaViewModel : ViewModel() {
         val i = list.indexOfFirst { it.id == s.accountConfigOpen }
         if (i < 0) return@update s
         val next = list[(i - 1 + list.size) % list.size]
-        syncActiveIdxToAccount(s, next.id).copy(accountConfigOpen = next.id)
+        focusAccountFromDetail(s, next.id)
     }
 
     fun switchAccountNext() = _state.update { s ->
@@ -105,13 +140,22 @@ class FiniaViewModel : ViewModel() {
         val i = list.indexOfFirst { it.id == s.accountConfigOpen }
         if (i < 0) return@update s
         val next = list[(i + 1) % list.size]
-        syncActiveIdxToAccount(s, next.id).copy(accountConfigOpen = next.id)
+        focusAccountFromDetail(s, next.id)
     }
 
-    private fun syncActiveIdxToAccount(s: FiniaUiState, id: String): FiniaUiState {
-        val filtered = filterAccounts(s.accounts, s.accountTypeFilter)
-        val idx = filtered.indexOfFirst { it.id == id }
-        return if (idx >= 0) s.copy(activeAccountIdx = idx) else s
+    // Same carousel-sync as selectAccountForForm: force "Todo" so the target account is always
+    // present regardless of the Cuentas/Tarjetas filter (switchAccountPrev/Next cycles through
+    // *all* accounts, not just the currently filtered ones — the old sync silently no-op'd
+    // whenever the target account's type didn't match the active filter, leaving the carousel
+    // behind stuck on the previous card) and land back on the "Todo" category chip.
+    private fun focusAccountFromDetail(s: FiniaUiState, id: String): FiniaUiState {
+        val idx = s.accounts.indexOfFirst { it.id == id }
+        return s.copy(
+            accountConfigOpen = id,
+            accountTypeFilter = AccountTypeFilter.TODO,
+            activeAccountIdx = if (idx >= 0) idx else s.activeAccountIdx,
+            homeCategoryFilter = "Todo",
+        )
     }
 
     fun toggleAccountEditMode() = _state.update { s ->
@@ -179,17 +223,9 @@ class FiniaViewModel : ViewModel() {
 
     // Corte / pago calendar (inside account detail edit mode)
     fun openAccCal(field: AccCalField) = _state.update {
-        it.copy(accCalOpen = true, accCalField = field, accCalYear = 2026, accCalMonth = 6, accCalSelected = MOCK_TODAY_ISO)
+        it.copy(accCalOpen = true, accCalField = field, accCalSelected = MOCK_TODAY_ISO)
     }
     fun closeAccCal() = _state.update { it.copy(accCalOpen = false) }
-    fun accCalPrevMonth() = _state.update { s ->
-        val m = s.accCalMonth - 1
-        if (m < 0) s.copy(accCalMonth = 11, accCalYear = s.accCalYear - 1) else s.copy(accCalMonth = m)
-    }
-    fun accCalNextMonth() = _state.update { s ->
-        val m = s.accCalMonth + 1
-        if (m > 11) s.copy(accCalMonth = 0, accCalYear = s.accCalYear + 1) else s.copy(accCalMonth = m)
-    }
     fun selectAccCalDay(iso: String) = _state.update { it.copy(accCalSelected = iso) }
     fun acceptAccCal() = _state.update { s ->
         val label = com.devmastercrack.finia.presentation.finia.util.calShortLabel(s.accCalSelected)
@@ -298,14 +334,36 @@ class FiniaViewModel : ViewModel() {
         val filtered = filterAccounts(s.accounts, s.accountTypeFilter)
         val active = filtered.getOrNull(s.activeAccountIdx) ?: filtered.firstOrNull()
         s.copy(
-            screen = FiniaScreen.ACCOUNTS, addOpen = true, addFromAccounts = true,
+            screen = FiniaScreen.ACCOUNTS, addOpen = true,
             categoryPickerOpen = false, datePickerOpen = false, accountPickerOpen = false,
             splitOn = false, cuotasOn = false, recordatorioOn = false, recurrenteOn = false, selectedPeople = emptyList(),
             form = TransactionForm(cuenta = active?.nombre ?: "Débito"),
             categoryOrigin = null, categoryConfidence = null, snackbar = null,
         )
     }
-    fun closeAdd() = _state.update { it.copy(addOpen = false) }
+    fun closeAdd() = _state.update { it.copy(addOpen = false, editingTxId = null) }
+
+    // Opens the same Nuevo-movimiento sheet, pre-filled from an existing transaction — submitExpense()
+    // checks editingTxId and updates that transaction in place instead of appending a new one.
+    fun openEditTx(id: Int) = _state.update { s ->
+        val tx = s.recentTx.find { it.id == id } ?: return@update s
+        val absAmount = kotlin.math.abs(tx.monto)
+        val montoStr = if (absAmount == absAmount.toLong().toDouble()) absAmount.toLong().toString() else absAmount.toString()
+        s.copy(
+            editingTxId = id,
+            addOpen = true,
+            txDetailOpen = null,
+            categoryPickerOpen = false, datePickerOpen = false, accountPickerOpen = false,
+            form = TransactionForm(
+                monto = montoStr,
+                tipo = if (tx.monto > 0) TxFlow.INGRESO else TxFlow.GASTO,
+                categoria = tx.categoria,
+                cuenta = s.accounts.find { it.id == tx.cuentaId }?.nombre ?: s.form.cuenta,
+                nota = tx.concepto,
+            ),
+            categoryOrigin = CategoryOrigin.MANUAL, categoryConfidence = null, snackbar = null,
+        )
+    }
     fun openAdvanced() = _state.update { it.copy(advancedOpen = true) }
     fun closeAdvanced() = _state.update { it.copy(advancedOpen = false) }
 
@@ -314,23 +372,17 @@ class FiniaViewModel : ViewModel() {
     fun toggleDestAccountPicker() = _state.update { it.copy(destAccountPickerOpen = !it.destAccountPickerOpen) }
     fun toggleDatePicker() = _state.update { s ->
         if (s.datePickerOpen) return@update s.copy(datePickerOpen = false)
-        val (y, m) = s.form.fecha.split("-").let { it[0].toInt() to it[1].toInt() }
-        s.copy(datePickerOpen = true, categoryPickerOpen = false, accountPickerOpen = false, calYear = y, calMonth = m - 1, calSelected = s.form.fecha)
-    }
-    fun calPrevMonth() = _state.update { s ->
-        val m = s.calMonth - 1
-        if (m < 0) s.copy(calMonth = 11, calYear = s.calYear - 1) else s.copy(calMonth = m)
-    }
-    fun calNextMonth() = _state.update { s ->
-        val m = s.calMonth + 1
-        if (m > 11) s.copy(calMonth = 0, calYear = s.calYear + 1) else s.copy(calMonth = m)
+        s.copy(datePickerOpen = true, categoryPickerOpen = false, accountPickerOpen = false, calSelected = s.form.fecha)
     }
     fun selectCalDay(iso: String) = _state.update { it.copy(calSelected = iso) }
     fun acceptDate() = _state.update { it.copy(form = it.form.copy(fecha = it.calSelected), datePickerOpen = false) }
 
     fun setTipoGasto() = _state.update { it.copy(form = it.form.copy(tipo = TxFlow.GASTO)) }
     fun setTipoIngreso() = _state.update { it.copy(form = it.form.copy(tipo = TxFlow.INGRESO)) }
-    fun onMontoChange(value: String) = _state.update { it.copy(form = it.form.copy(monto = value)) }
+    fun setTipoTransferencia() = _state.update { it.copy(form = it.form.copy(tipo = TxFlow.TRANSFERENCIA)) }
+    fun onMontoChange(value: String) = _state.update {
+        it.copy(form = it.form.copy(monto = com.devmastercrack.finia.presentation.finia.util.cleanAmountInput(value)))
+    }
     fun onNotaLargaChange(value: String) = _state.update { it.copy(form = it.form.copy(notaLarga = value)) }
 
     fun onNotaChange(nota: String) = _state.update { s ->
@@ -348,15 +400,30 @@ class FiniaViewModel : ViewModel() {
         next
     }
 
+    // Closing the picker is left to the sheet itself (animated sheetState.hide(), then
+    // toggleXxxPicker) instead of flipping the open flag here — doing both in the same state
+    // update yanks the ModalBottomSheet out of composition before its selection highlight or
+    // close animation can even render, so the tap feels like it does nothing before the sheet
+    // just vanishes.
     fun selectCategoryManually(nombre: String) = _state.update {
-        it.copy(form = it.form.copy(categoria = nombre), categoryOrigin = CategoryOrigin.MANUAL, categoryConfidence = null, categoryPickerOpen = false)
+        it.copy(form = it.form.copy(categoria = nombre), categoryOrigin = CategoryOrigin.MANUAL, categoryConfidence = null)
     }
 
-    fun selectAccountForForm(nombre: String) = _state.update {
-        it.copy(form = it.form.copy(cuenta = nombre), accountPickerOpen = false)
+    // Also brings that account into focus on the Accounts screen's carousel behind the sheet
+    // (switching to "Todo" so it's guaranteed visible there regardless of the Cuentas/Tarjetas
+    // filter, and landing back on the "Todo" category chip like any other active-account change)
+    // — reinforces that the transaction being built is going to post against this account.
+    fun selectAccountForForm(nombre: String) = _state.update { s ->
+        val idx = s.accounts.indexOfFirst { it.nombre == nombre }
+        s.copy(
+            form = s.form.copy(cuenta = nombre),
+            accountTypeFilter = AccountTypeFilter.TODO,
+            activeAccountIdx = if (idx >= 0) idx else s.activeAccountIdx,
+            homeCategoryFilter = "Todo",
+        )
     }
     fun selectDestAccountForForm(nombre: String) = _state.update {
-        it.copy(form = it.form.copy(cuentaDestino = nombre), destAccountPickerOpen = false)
+        it.copy(form = it.form.copy(cuentaDestino = nombre))
     }
 
     fun toggleNewCategory() = _state.update { it.copy(newCategoryOpen = !it.newCategoryOpen, newCategoryName = "", newCategoryEmoji = "🏷️", newCategoryEmojiPickerOpen = false) }
@@ -385,12 +452,48 @@ class FiniaViewModel : ViewModel() {
     fun toggleQuickBtnMode() = _state.update { it.copy(quickBtnMode = if (it.quickBtnMode == QuickBtnMode.MIC) QuickBtnMode.CAMERA else QuickBtnMode.MIC) }
 
     fun submitExpense() = _state.update { s ->
-        val monto = s.form.monto.toDoubleOrNull()
-        if (monto == null || monto == 0.0) return@update s
+        val monto = com.devmastercrack.finia.presentation.finia.util.num(s.form.monto)
+        if (monto == 0.0) return@update s
+
+        if (s.form.tipo == TxFlow.TRANSFERENCIA) {
+            val origenId = s.accounts.find { it.nombre == s.form.cuenta }?.id
+            val destinoId = s.accounts.find { it.nombre == s.form.cuentaDestino }?.id
+            if (origenId == null || destinoId == null || origenId == destinoId) return@update s
+            val montoAbs = kotlin.math.abs(monto)
+            val salida = Transaction(
+                id = s.nextTxId, concepto = s.form.nota.ifBlank { "Transferencia a ${s.form.cuentaDestino}" },
+                categoria = "Transferencia", cuentaId = origenId, monto = -montoAbs, emoji = "🔁", fecha = "Hoy",
+            )
+            val entrada = Transaction(
+                id = s.nextTxId + 1, concepto = s.form.nota.ifBlank { "Transferencia de ${s.form.cuenta}" },
+                categoria = "Transferencia", cuentaId = destinoId, monto = montoAbs, emoji = "🔁", fecha = "Hoy",
+            )
+            return@update s.copy(
+                recentTx = listOf(salida, entrada) + s.recentTx, nextTxId = s.nextTxId + 2,
+                addOpen = false, advancedOpen = false,
+                snackbar = "Transferencia realizada",
+            )
+        }
+
         val signed = if (s.form.tipo == TxFlow.INGRESO) kotlin.math.abs(monto) else -kotlin.math.abs(monto)
-        val wasAuto = s.categoryOrigin == CategoryOrigin.AUTO
         val cuentaId = s.accounts.find { it.nombre == s.form.cuenta }?.id ?: s.accounts.firstOrNull()?.id ?: ""
         val emoji = allCategories(s).find { it.nombre == s.form.categoria }?.emoji ?: "💳"
+
+        val editingId = s.editingTxId
+        if (editingId != null) {
+            val updatedTx = s.recentTx.map { t ->
+                if (t.id != editingId) t else t.copy(
+                    concepto = s.form.nota.ifBlank { s.form.categoria }, categoria = s.form.categoria,
+                    cuentaId = cuentaId, monto = signed, emoji = emoji,
+                )
+            }
+            return@update s.copy(
+                recentTx = updatedTx, addOpen = false, advancedOpen = false, editingTxId = null,
+                snackbar = "Movimiento actualizado",
+            )
+        }
+
+        val wasAuto = s.categoryOrigin == CategoryOrigin.AUTO
         val newTx = Transaction(
             id = s.nextTxId, concepto = s.form.nota.ifBlank { s.form.categoria }, categoria = s.form.categoria,
             cuentaId = cuentaId, monto = signed, emoji = emoji, fecha = "Hoy",

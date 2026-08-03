@@ -1,18 +1,27 @@
 package com.devmastercrack.finia.presentation.finia.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,16 +32,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devmastercrack.finia.core.theme.FiniaColors
 import com.devmastercrack.finia.core.theme.FiniaText
+import com.devmastercrack.finia.presentation.finia.util.fmt
 
 @Composable
 fun CircleIconButton(
@@ -72,24 +90,53 @@ fun SegmentedControl(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val density = LocalDensity.current
+    var containerWidthPx by remember { mutableIntStateOf(0) }
+    var rowHeightPx by remember { mutableIntStateOf(0) }
+    val segmentWidthPx = if (options.isNotEmpty() && containerWidthPx > 0) containerWidthPx / options.size else 0
+
+    // Same sliding "drop" indicator as the Gasto/Ingreso toggle: one pill that glides between
+    // segments instead of each option owning its own independent white background.
+    val indicatorSpring = spring<Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+    val indicatorX by animateDpAsState(
+        targetValue = with(density) { (segmentWidthPx * selectedIndex).toDp() },
+        animationSpec = indicatorSpring,
+        label = "segIndicatorX",
+    )
+    val indicatorWidth by animateDpAsState(
+        targetValue = with(density) { segmentWidthPx.toDp() },
+        animationSpec = indicatorSpring,
+        label = "segIndicatorWidth",
+    )
+
+    Box(
         modifier = modifier
             .background(FiniaColors.SegmentedTrack, RoundedCornerShape(20.dp))
-            .padding(3.dp),
+            .padding(3.dp)
+            .onSizeChanged { containerWidthPx = it.width },
     ) {
-        options.forEachIndexed { i, label ->
-            val selected = i == selectedIndex
-            val bg by animateColorAsState(if (selected) Color.White else Color.Transparent, label = "segBg")
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(17.dp))
-                    .background(bg)
-                    .clickable { onSelect(i) }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(label, style = FiniaText.ChipMedium, color = FiniaColors.TextPrimary)
+        Box(
+            Modifier
+                .offset { IntOffset(indicatorX.roundToPx(), 0) }
+                .width(indicatorWidth)
+                .height(with(density) { rowHeightPx.toDp() })
+                .clip(RoundedCornerShape(17.dp))
+                .background(Color.White),
+        )
+        Row(Modifier.onSizeChanged { rowHeightPx = it.height }) {
+            options.forEachIndexed { i, label ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                        ) { onSelect(i) }
+                        .padding(vertical = 9.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(label, style = FiniaText.ChipMedium, color = FiniaColors.TextPrimary)
+                }
             }
         }
     }
@@ -200,5 +247,59 @@ fun RowIconCircle(
         contentAlignment = Alignment.Center,
     ) {
         Text(emoji, fontSize = (size.value * 0.4f).sp)
+    }
+}
+
+/**
+ * Shared by HomeScreen's Ingresos/Gastos and AccountsScreen's Gastado/Ingresos: a circular
+ * colored icon badge + muted label + black amount (not a colored amount), with border/background
+ * that swap to [activeBg]/[activeBorder] when acting as a Gasto/Ingreso filter toggle — pass
+ * `active = false` and an always-no-op-looking [onClick] for a purely informational (non-filter)
+ * usage. One composable so both screens can never visually drift apart from each other again.
+ */
+@Composable
+fun FlowFilterCard(
+    modifier: Modifier,
+    label: String,
+    amountValue: Double,
+    icon: ImageVector,
+    iconTint: Color,
+    active: Boolean,
+    activeBg: Color,
+    activeBorder: Color,
+    onClick: () -> Unit,
+) {
+    val bg by animateColorAsState(if (active) activeBg else Color.White, label = "flowBg")
+    val border by animateColorAsState(if (active) activeBorder else FiniaColors.BorderSubtle, label = "flowBorder")
+    // Counts up/down through the intermediate values instead of cutting straight to the new
+    // total — animates the actual number, not just a crossfade of the text.
+    val animatedAmount by animateFloatAsState(
+        targetValue = amountValue.toFloat(),
+        animationSpec = tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "flowAmountCounter",
+    )
+    Row(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(bg)
+            .border(1.5.dp, border, RoundedCornerShape(16.dp))
+            // Background/border already animate on selection — a ripple on top is redundant
+            // feedback competing with it, same reasoning as the chips and Gasto/Ingreso toggle.
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick,
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(32.dp).clip(CircleShape).background(iconTint), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+        }
+        Column {
+            Text(label, style = FiniaText.SecondarySmall, color = FiniaColors.TextSecondary)
+            Text(fmt(animatedAmount.toDouble()), style = FiniaText.RowTitleBold.copy(fontSize = 15.sp), color = FiniaColors.TextPrimary)
+        }
     }
 }

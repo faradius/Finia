@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -91,7 +92,9 @@ fun AiScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modif
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().background(AiMessageAreaBg),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            // Bottom-anchored so a short conversation sits just above the input bar instead of
+            // pinned to the top with a large dead gap of empty space below it.
+            verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.Bottom),
         ) {
             items(state.aiMessages, key = { it.id }) { msg ->
                 MessageRow(msg, netWorthValue, ingresos, gastos, state.recurring)
@@ -342,7 +345,13 @@ private fun AiInputBar(state: FiniaUiState, vm: FiniaViewModel) {
         Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .border(androidx.compose.foundation.BorderStroke(1.dp, FiniaColors.BorderSubtle2)),
+            .border(androidx.compose.foundation.BorderStroke(1.dp, FiniaColors.BorderSubtle2))
+            // This screen hides the bottom nav bar and Scaffold gives it zero bottom inset in
+            // exchange (see FiniaRoot's effectiveBarVisible), so the input bar has to reserve
+            // its own safe area — otherwise it renders underneath the 3-button nav / gets
+            // covered by the keyboard instead of sitting above it.
+            .navigationBarsPadding()
+            .imePadding(),
     ) {
         Row(
             Modifier
@@ -352,77 +361,72 @@ private fun AiInputBar(state: FiniaUiState, vm: FiniaViewModel) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SuggestionLabels.forEach { label ->
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(FiniaColors.AiSuggestionBg)
-                        .border(1.dp, FiniaColors.AiSuggestionBorder, RoundedCornerShape(16.dp))
-                        .clickable { vm.sendAiMessage(label) }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                ) {
-                    Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = FiniaColors.AiGreen)
-                }
+                androidx.compose.material3.SuggestionChip(
+                    onClick = { vm.sendAiMessage(label) },
+                    label = { Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = FiniaColors.AiSuggestionBg,
+                        labelColor = FiniaColors.AiGreen,
+                    ),
+                    border = androidx.compose.material3.SuggestionChipDefaults.suggestionChipBorder(
+                        enabled = true,
+                        borderColor = FiniaColors.AiSuggestionBorder,
+                    ),
+                )
             }
         }
 
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 22.dp, start = 20.dp, end = 20.dp),
+                .padding(top = 10.dp, bottom = 12.dp, start = 20.dp, end = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            RoundIconButton(icon = Icons.Outlined.AttachFile, contentDescription = "Adjuntar", onClick = {})
-
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color.White)
-                    .border(1.dp, FiniaColors.BorderSubtle, RoundedCornerShape(22.dp))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart,
+            androidx.compose.material3.FilledTonalIconButton(
+                onClick = {},
+                colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = FiniaColors.SurfaceNeutral2, contentColor = FiniaColors.TextMuted,
+                ),
             ) {
-                if (state.aiInput.isEmpty()) {
-                    Text("Pregúntale a FinanIA...", fontSize = 14.sp, color = FiniaColors.TextFaint)
-                }
-                BasicTextField(
-                    value = state.aiInput,
-                    onValueChange = vm::onAiInputChange,
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = FiniaColors.TextPrimary),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(FiniaColors.AiGreen),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Icon(Icons.Outlined.AttachFile, contentDescription = "Adjuntar", modifier = Modifier.size(18.dp))
             }
 
-            RoundIconButton(icon = Icons.Outlined.Mic, contentDescription = "Mensaje de voz", onClick = {})
+            androidx.compose.material3.OutlinedTextField(
+                value = state.aiInput,
+                onValueChange = vm::onAiInputChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Pregúntale a FinanIA...", fontSize = 14.sp, color = FiniaColors.TextFaint) },
+                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = FiniaColors.TextPrimary),
+                singleLine = true,
+                shape = RoundedCornerShape(22.dp),
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = FiniaColors.AiGreen,
+                    unfocusedBorderColor = FiniaColors.BorderSubtle,
+                    cursorColor = FiniaColors.AiGreen,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                ),
+            )
 
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(FiniaColors.AiGreen)
-                    .clickable { vm.sendAiMessage() },
-                contentAlignment = Alignment.Center,
+            androidx.compose.material3.FilledTonalIconButton(
+                onClick = {},
+                colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = FiniaColors.SurfaceNeutral2, contentColor = FiniaColors.TextMuted,
+                ),
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(18.dp))
+                Icon(Icons.Outlined.Mic, contentDescription = "Mensaje de voz", modifier = Modifier.size(18.dp))
+            }
+
+            androidx.compose.material3.FilledIconButton(
+                onClick = { vm.sendAiMessage() },
+                colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                    containerColor = FiniaColors.AiGreen, contentColor = Color.White,
+                ),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", modifier = Modifier.size(18.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun RoundIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, contentDescription: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(FiniaColors.SurfaceNeutral2)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = contentDescription, tint = FiniaColors.TextMuted, modifier = Modifier.size(18.dp))
     }
 }

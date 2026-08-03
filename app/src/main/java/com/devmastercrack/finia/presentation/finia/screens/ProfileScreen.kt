@@ -3,9 +3,11 @@ package com.devmastercrack.finia.presentation.finia.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -47,37 +49,101 @@ private data class ProfileMenuItem(
 
 @Composable
 fun ProfileScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-        BackButton(vm::goBackFromProfile, modifier = Modifier.padding(top = 14.dp, start = 12.dp, end = 12.dp))
-
-        Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box {
-                Box(
-                    Modifier
-                        .size(104.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(FiniaColors.AccentSoft, Color(0xFFCFE6D4)))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Person, contentDescription = null, tint = FiniaColors.Accent, modifier = Modifier.size(46.dp))
-                }
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(FiniaColors.Accent)
-                        .border(3.dp, Color.White, CircleShape)
-                        .clickable {},
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "Editar foto", tint = Color.White, modifier = Modifier.size(14.dp))
-                }
-            }
-            Text(MockData.userName, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = FiniaColors.TextPrimary, modifier = Modifier.padding(top = 14.dp))
-            Text(MockData.userEmail, style = FiniaText.Secondary.copy(fontSize = 13.sp), color = FiniaColors.TextSecondary, modifier = Modifier.padding(top = 2.dp))
+    // Only the back button + title row stay fixed — same fixed-header pattern as Home/Accounts/
+    // Más opciones — everything else, including the identity/plan card, scrolls in its own
+    // Column with weight(1f).
+    Column(modifier.fillMaxSize()) {
+        // M3 small top app bar: nav icon and title share the same row, not stacked — the
+        // avatar row below shows the *user's* name, which isn't the same thing as the screen's
+        // title.
+        Row(
+            Modifier.fillMaxWidth().padding(top = 14.dp, start = 12.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BackButton(vm::goBackFromProfile)
+            Text(
+                "Mi perfil", style = FiniaText.ScreenTitle, color = FiniaColors.TextPrimary,
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
 
+        // Only the back arrow + "Mi perfil" title stay fixed now — the identity/plan card
+        // scrolls away with everything else instead of being pinned above it.
+        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+        // One unified card instead of two separate floating pieces (an identity row + a
+        // detached plan row) — identity and plan status are two facts about the same thing
+        // (this account), so they live inside one card now, split by a divider, matching the
+        // exact white/border/rounded language the Cuenta/Preferencias groups use below.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, start = 20.dp, end = 20.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White)
+                .border(1.dp, FiniaColors.BorderSubtle2, RoundedCornerShape(20.dp)),
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box {
+                    Box(
+                        Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(FiniaColors.AccentSoft, Color(0xFFCFE6D4)))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Person, contentDescription = null, tint = FiniaColors.Accent, modifier = Modifier.size(24.dp))
+                    }
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(FiniaColors.Accent)
+                            .border(2.dp, Color.White, CircleShape)
+                            .clickable {},
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = "Editar foto", tint = Color.White, modifier = Modifier.size(9.dp))
+                    }
+                }
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(
+                        MockData.userName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = FiniaColors.TextPrimary,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        MockData.userEmail, style = FiniaText.Secondary.copy(fontSize = 12.sp), color = FiniaColors.TextSecondary,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 1.dp),
+                    )
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(FiniaColors.BorderSubtle2))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable {}
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("👑", fontSize = 15.sp)
+                Text(
+                    "Plan Free", style = FiniaText.RowTitleSemibold.copy(fontSize = 14.sp), color = FiniaColors.TextPrimary,
+                    modifier = Modifier.weight(1f).padding(start = 8.dp),
+                )
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(FiniaColors.AccentSoft)
+                        .clickable {}
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text("Mejorar", style = FiniaText.LabelSmall, color = FiniaColors.Accent)
+                }
+            }
+        }
         ProfileGroup(
             label = "Cuenta",
             items = listOf(
@@ -89,6 +155,18 @@ fun ProfileScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = 
             label = "Preferencias",
             items = listOf(
                 ProfileMenuItem("⚙️", FiniaColors.PastelBlue, "Configuraciones", "Ajustes generales de la app", onClick = vm::goSettings),
+                ProfileMenuItem("🔔", FiniaColors.PastelGold, "Gestionar notificaciones", "Configurar alertas y recordatorios", onClick = vm::goNotifSettings),
+                ProfileMenuItem("💱", FiniaColors.PastelGreen, "Moneda", "Elige la moneda de tus movimientos", onClick = {}),
+                ProfileMenuItem("🌐", FiniaColors.PastelBlue, "Idioma", "Del texto, el micrófono y el asistente", onClick = {}),
+            ),
+        )
+        ProfileGroup(
+            label = "Acerca de",
+            items = listOf(
+                ProfileMenuItem("❓", FiniaColors.PastelBlue, "Centro de ayuda", "¿Tienes dudas? Contáctanos", onClick = {}),
+                ProfileMenuItem("⭐", FiniaColors.PastelGold, "Califica la app", "Cuéntanos qué te parece", onClick = {}),
+                ProfileMenuItem("✉️", FiniaColors.PastelGreen, "Reportar un problema", "Ayúdanos a mejorar", onClick = {}),
+                ProfileMenuItem("🛡️", FiniaColors.PastelNeutral, "Términos y privacidad", "Legal y política de privacidad", onClick = {}),
             ),
         )
         ProfileGroup(
@@ -98,7 +176,13 @@ fun ProfileScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = 
             ),
         )
 
+        Text(
+            "v0.0.1 (1)", style = FiniaText.SecondarySmall, color = FiniaColors.TextFaint,
+            modifier = Modifier.fillMaxWidth().padding(top = 20.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+
         Box(Modifier.size(1.dp, 32.dp))
+        }
     }
 }
 

@@ -4,15 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,10 +27,13 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -41,9 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devmastercrack.finia.core.theme.FiniaColors
@@ -59,8 +62,8 @@ import com.devmastercrack.finia.presentation.finia.model.AccountType
 import com.devmastercrack.finia.presentation.finia.model.CreditPrimaryView
 import com.devmastercrack.finia.presentation.finia.model.solidOrFallback
 import com.devmastercrack.finia.presentation.finia.util.fmt
-import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modifier) {
     val acc = state.accounts.find { it.id == state.accountConfigOpen } ?: return
@@ -71,44 +74,33 @@ fun AccountDetailSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifi
     val transferCount = detailTx.count { it.categoria == "Transferencia" }
     val accent = if (acc.isCredit) Color(0xFF9C7326) else acc.cardBg.solidOrFallback()
 
-    // Drag progress is purely visual feedback for this one sheet, so it stays local Compose
-    // state instead of round-tripping through the shared ViewModel StateFlow on every pixel of
-    // movement — that would force every screen holding the (unstable) FiniaUiState to be
-    // considered for recomposition on each drag delta.
-    var dragY by remember { mutableFloatStateOf(0f) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Cap how tall the sheet can grow (credit-card accounts show extra sections and can run
+    // long with the emoji/tipo pickers open) without forcing every account to that height —
+    // non-credit accounts have a much shorter form and should wrap to their real content.
+    val maxSheetHeight = LocalConfiguration.current.screenHeightDp.dp * 0.78f
 
-    Box(modifier.fillMaxSize()) {
-        Box(
+    // A hand-rolled Box + manual drag-to-dismiss wasn't a real Material bottom sheet — no scrim
+    // behind it (the white sheet had nothing dimming the screen behind it to contrast against,
+    // which was why it visually "got lost") and no elevation shadow giving it depth. The real
+    // ModalBottomSheet provides both for free, plus native swipe-to-dismiss/predictive-back, on
+    // top of the same dragHandle-removed + manual SheetHandle() pattern used by the other sheets.
+    ModalBottomSheet(
+        onDismissRequest = vm::closeAccountConfig,
+        sheetState = sheetState,
+        modifier = modifier,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = null,
+    ) {
+        Column(
             Modifier
-                .fillMaxSize()
-                .padding(top = 230.dp)
-                .clickable(indication = null, interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, onClick = vm::closeAccountConfig),
-        )
-        Box(
-            Modifier
-                .align(Alignment.BottomCenter)
-                .offset { IntOffset(0, dragY.roundToInt()) }
                 .fillMaxWidth()
-                .fillMaxHeight(0.78f)
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color.White)
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures(
-                        onDragEnd = {
-                            if (dragY > 90f) vm.closeAccountConfig()
-                            dragY = 0f
-                        },
-                        onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            dragY = maxOf(0f, dragY + dragAmount)
-                        },
-                    )
-                }
+                .heightIn(max = maxSheetHeight)
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
         ) {
-            Column(Modifier.fillMaxWidth()) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SheetHandle() }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SheetHandle() }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     val editBg = if (state.accountEditMode) FiniaColors.AccentSoft else FiniaColors.SurfaceNeutral
@@ -333,7 +325,6 @@ fun AccountDetailSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifi
                 }
             }
         }
-    }
 }
 
 @Composable

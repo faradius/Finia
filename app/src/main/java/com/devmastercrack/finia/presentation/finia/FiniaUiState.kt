@@ -16,6 +16,7 @@ import com.devmastercrack.finia.presentation.finia.model.Debt
 import com.devmastercrack.finia.presentation.finia.model.DebtTab
 import com.devmastercrack.finia.presentation.finia.model.FiniaCategory
 import com.devmastercrack.finia.presentation.finia.model.FiniaScreen
+import com.devmastercrack.finia.presentation.finia.model.HomeAlertFilter
 import com.devmastercrack.finia.presentation.finia.model.NotificationItem
 import com.devmastercrack.finia.presentation.finia.model.NotifPrefs
 import com.devmastercrack.finia.presentation.finia.model.QuickBtnMode
@@ -34,6 +35,10 @@ data class FiniaUiState(
     // Top-level navigation
     val screen: FiniaScreen = FiniaScreen.HOME,
     val showBalance: Boolean = true,
+    // Single source of truth for premium status — drives both the crown badge on Home's
+    // profile icon and (eventually) the Plan card in Mi perfil. Defaults to false since this
+    // build's freemium scope has no real subscription flow yet.
+    val isPremiumUser: Boolean = false,
 
     // Data
     val accounts: List<Account> = MockData.accounts,
@@ -46,19 +51,41 @@ data class FiniaUiState(
     val notifPrefs: NotifPrefs = NotifPrefs(),
     val nextTxId: Int = 100,
 
+    // Home screen
+    // Named distinctly from the (historically misnamed, actually Accounts-screen-only)
+    // homeCategoryFilter/homeFlowFilter below to avoid implying this belongs to the same screen.
+    val homeScreenMonthOffset: Int = 0,
+    val homeMonthPickerOpen: Boolean = false,
+    // Tapping the Ingresos/Gastos stat card filters "Movimientos recientes" by flow, same as
+    // AccountsScreen's Gastado/Ingresos cards filter that screen's transaction list.
+    val homeScreenFlowFilter: TxFlow? = null,
+    // Which list "Pendientes y alertas" shows below — tapping Me deben/Pagos próximos swaps it.
+    val homeAlertFilter: HomeAlertFilter = HomeAlertFilter.PAGOS,
+    // Id of a transaction the user swiped-to-delete, awaiting confirmation in a dialog —
+    // nothing is actually removed from recentTx until that's confirmed.
+    val deleteTxPending: Int? = null,
+    // Id of a transaction whose read-only detail sheet is open (tapped a row).
+    val txDetailOpen: Int? = null,
+    // Id of the transaction being edited via "Editar" in the detail sheet — reuses the
+    // Nuevo-movimiento form/sheet (addOpen), submitExpense() updates this id in place instead
+    // of appending a new transaction when it's set.
+    val editingTxId: Int? = null,
+
     // Accounts screen
     val accountTypeFilter: AccountTypeFilter = AccountTypeFilter.TODO,
     val activeAccountIdx: Int = 0,
     val acctMonthOffset: Int = 0,
+    val acctMonthPickerOpen: Boolean = false,
     val homeCategoryFilter: String = "Todo",
     val homeFlowFilter: TxFlow? = null,
+    val acctSearchOpen: Boolean = false,
+    val acctSearchQuery: String = "",
 
     // Debts screen
     val debtTab: DebtTab = DebtTab.OWED,
 
     // Add-transaction sheet
     val addOpen: Boolean = false,
-    val addFromAccounts: Boolean = false,
     val advancedOpen: Boolean = false,
     val categoryPickerOpen: Boolean = false,
     val datePickerOpen: Boolean = false,
@@ -69,8 +96,6 @@ data class FiniaUiState(
     val categoryConfidence: CategoryConfidence? = null,
     val snackbar: String? = null,
     val quickBtnMode: QuickBtnMode = QuickBtnMode.MIC,
-    val calYear: Int = 2026,
-    val calMonth: Int = 6,
     val calSelected: String = MOCK_TODAY_ISO,
     val splitOn: Boolean = false,
     val cuotasOn: Boolean = false,
@@ -116,8 +141,6 @@ data class FiniaUiState(
     // Account detail calendar (corte/pago)
     val accCalOpen: Boolean = false,
     val accCalField: AccCalField? = null,
-    val accCalYear: Int = 2026,
-    val accCalMonth: Int = 6,
     val accCalSelected: String = MOCK_TODAY_ISO,
 
     // Card payment sheet

@@ -63,8 +63,8 @@ fun deriveAccountView(acc: Account, primaryView: CreditPrimaryView): AccountView
 
 fun filterAccounts(accounts: List<Account>, filter: AccountTypeFilter): List<Account> = when (filter) {
     AccountTypeFilter.TODO -> accounts
-    AccountTypeFilter.TARJETAS -> accounts.filter { it.isCredit }
-    AccountTypeFilter.CUENTAS -> accounts.filterNot { it.isCredit }
+    AccountTypeFilter.TARJETAS -> accounts.filter { it.isCard }
+    AccountTypeFilter.CUENTAS -> accounts.filterNot { it.isCard }
 }
 
 fun owedToMe(debts: List<Debt>, settled: Set<Int>): Double =
@@ -109,6 +109,7 @@ fun filterAccountTx(
                 null -> true
                 TxFlow.GASTO -> flow.monto < 0
                 TxFlow.INGRESO -> flow.monto > 0
+                TxFlow.TRANSFERENCIA -> flow.categoria == "Transferencia"
             }
         }
 }

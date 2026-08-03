@@ -38,11 +38,17 @@ fun NotifSettingsScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modif
     )
 
     Column(modifier.fillMaxSize()) {
-        BackButton(vm::goBackFromNotifSettings, modifier = Modifier.padding(top = 14.dp, start = 12.dp, end = 12.dp, bottom = 4.dp))
-        Text(
-            "Gestionar notificaciones", style = FiniaText.ScreenTitle, color = FiniaColors.TextPrimary,
-            modifier = Modifier.padding(top = 2.dp, start = 20.dp, end = 20.dp, bottom = 16.dp),
-        )
+        // M3 small top app bar: nav icon and title share the same row instead of stacking.
+        Row(
+            Modifier.fillMaxWidth().padding(top = 14.dp, start = 12.dp, end = 12.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BackButton(vm::goBackFromNotifSettings)
+            Text(
+                "Gestionar notificaciones", style = FiniaText.ScreenTitle, color = FiniaColors.TextPrimary,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
         Column(
             Modifier
                 .fillMaxWidth()

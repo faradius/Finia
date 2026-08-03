@@ -48,22 +48,22 @@ fun NotificationsScreen(state: FiniaUiState, vm: FiniaViewModel, modifier: Modif
     }
 
     Column(modifier.fillMaxSize()) {
+        // M3 small top app bar: nav icon and title share the same row instead of stacking.
         Row(
-            Modifier.fillMaxWidth().padding(top = 14.dp, start = 12.dp, end = 12.dp),
+            Modifier.fillMaxWidth().padding(top = 14.dp, start = 12.dp, end = 12.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BackButton(vm::goBackFromNotifications)
-            Box(Modifier.weight(1f))
+            Text(
+                "Notificaciones", style = FiniaText.ScreenTitleLarge, color = FiniaColors.TextPrimary,
+                modifier = Modifier.padding(start = 8.dp).weight(1f),
+            )
             if (hasUnread) {
                 CircleIconButton(onClick = vm::markAllNotifsRead, bg = Color.Transparent, contentColor = FiniaColors.TextMuted) {
                     Icon(Icons.Filled.Check, contentDescription = "Marcar todas como leídas", modifier = Modifier.size(18.dp))
                 }
             }
         }
-        Text(
-            "Notificaciones", style = FiniaText.ScreenTitleLarge, color = FiniaColors.TextPrimary,
-            modifier = Modifier.padding(top = 2.dp, start = 20.dp, end = 20.dp, bottom = 16.dp),
-        )
 
         if (state.notifItems.isEmpty()) {
             Column(

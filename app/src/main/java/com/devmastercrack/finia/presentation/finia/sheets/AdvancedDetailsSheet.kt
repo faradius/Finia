@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.devmastercrack.finia.core.theme.FiniaColors
 import com.devmastercrack.finia.core.theme.FiniaText
 import com.devmastercrack.finia.presentation.finia.FiniaUiState
@@ -38,8 +40,14 @@ import com.devmastercrack.finia.presentation.finia.components.FiniaSwitch
 import com.devmastercrack.finia.presentation.finia.model.PeopleOptions
 import com.devmastercrack.finia.presentation.finia.util.fmt
 
+/**
+ * Full-screen "step 2" opened from within [AddTransactionSheet]. Wrapped in its own [Dialog]
+ * window (full width, so it can truly fill the screen) rather than rendered in-tree, so it
+ * stacks above AddTransactionSheet's own ModalBottomSheet window instead of ending up behind it.
+ */
 @Composable
 fun AdvancedDetailsSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modifier = Modifier) {
+    Dialog(onDismissRequest = vm::closeAdvanced, properties = DialogProperties(usePlatformDefaultWidth = false)) {
     Column(modifier.fillMaxSize().background(Color.White)) {
         Row(
             Modifier.fillMaxWidth().padding(20.dp),
@@ -89,7 +97,7 @@ fun AdvancedDetailsSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modi
                     }
                 }
                 if (state.selectedPeople.isNotEmpty()) {
-                    val monto = state.form.monto.toDoubleOrNull() ?: 0.0
+                    val monto = com.devmastercrack.finia.presentation.finia.util.num(state.form.monto)
                     val n = state.selectedPeople.size + 1
                     Text(
                         "Cada quien paga ${fmt(monto / n)} (incluyéndote)", style = FiniaText.SecondarySmall, color = FiniaColors.TextSecondary,
@@ -174,6 +182,7 @@ fun AdvancedDetailsSheet(state: FiniaUiState, vm: FiniaViewModel, modifier: Modi
                 Text("Listo", style = FiniaText.Button.copy(fontSize = 15.sp), color = Color.White)
             }
         }
+    }
     }
 }
 

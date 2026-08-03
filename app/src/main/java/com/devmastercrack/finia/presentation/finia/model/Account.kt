@@ -46,6 +46,7 @@ data class Account(
     val pago: String? = null,
 ) {
     val isCredit: Boolean get() = tipo == AccountType.CREDIT
+    val isCard: Boolean get() = tipo == AccountType.CREDIT || tipo == AccountType.DEBIT
 }
 
 fun CardBackground.solidOrFallback(): Color = when (this) {

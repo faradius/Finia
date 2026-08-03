@@ -1,8 +1,10 @@
 package com.devmastercrack.finia.presentation.finia.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,8 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,8 +42,16 @@ fun AccountCard(
     modifier: Modifier = Modifier,
 ) {
     val acc = view.account
-    val width = if (isActive) 312.dp else 280.dp
-    val alphaVal = if (isActive) 1f else 0.55f
+    // Fixed width — changing width (animated or not) based on which card is "active" makes
+    // every neighboring card's position shift as you scroll, which is what made the carousel's
+    // snap-to-center feel broken/glitchy. Active vs inactive is conveyed by opacity alone, which
+    // doesn't affect layout at all.
+    val width = 296.dp
+    val alphaVal by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isActive) 1f else 0.55f,
+        animationSpec = androidx.compose.animation.core.tween(110),
+        label = "accountCardAlpha",
+    )
     val bgModifier = when (val bg = acc.cardBg) {
         is CardBackground.Solid -> Modifier.background(bg.color)
         is CardBackground.Gradient -> Modifier.background(bg.brush)
@@ -50,7 +63,15 @@ fun AccountCard(
             .alpha(alphaVal)
             .clip(RoundedCornerShape(24.dp))
             .then(bgModifier)
-            .clickable(onClick = onClick)
+            // A ripple sweeping across the card while it's simultaneously sliding into the
+            // center (the tap-to-navigate case, isActive == false at tap time) reads as a messy
+            // double effect once it arrives. Only the already-centered card — where a tap just
+            // opens its detail sheet in place, nothing moves — keeps the ripple.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = if (isActive) LocalIndication.current else null,
+                onClick = onClick,
+            )
             .padding(20.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween) {
