@@ -1,0 +1,55 @@
+# Valida cada PR antes de que entre a integration, qa o main:
+# 1. que respete el flujo  FINIA-### → integration → qa → main
+# 2. que pasen los tests y compile.
+name: CI
+
+on:
+  pull_request:
+    branches: [integration, qa, main]
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  flujo:
+    name: Flujo de ramas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar origen y destino
+        env:
+          ORIGEN: ${{ github.head_ref }}
+          DESTINO: ${{ github.base_ref }}
+        run: |
+          case "$DESTINO" in
+            integration)
+              [[ "$ORIGEN" =~ ^FINIA-[0-9]{3,}$ ]] || {
+                echo "::error::A integration solo entran ramas de feature con formato FINIA-001 (llegó '$ORIGEN')."
+                exit 1
+              } ;;
+            qa)
+              [[ "$ORIGEN" == "integration" ]] || {
+                echo "::error::A qa solo se promueve desde integration (llegó '$ORIGEN')."
+                exit 1
+              } ;;
+            main)
+              [[ "$ORIGEN" == "qa" || "$ORIGEN" =~ ^hotfix/FINIA-[0-9]{3,}$ ]] || {
+                echo "::error::A main solo se promueve desde qa (o un hotfix/FINIA-###). Llegó '$ORIGEN'."
+                exit 1
+              } ;;
+          esac
+          echo "✓ $ORIGEN → $DESTINO"
+
+  tests:
+    name: Tests y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - run: chmod +x gradlew
+      - run: ./gradlew testDevDebugUnitTest assembleDevDebug

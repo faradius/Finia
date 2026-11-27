@@ -22,17 +22,56 @@ android {
         applicationId = "com.devmastercrack.finia"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        // En CI, FINIA_VERSION_CODE es el número de ejecución de GitHub Actions, para que
+        // cada build que llega a App Distribution se instale encima de la anterior.
+        versionCode = providers.environmentVariable("FINIA_VERSION_CODE").orNull?.toInt() ?: 1
         versionName = "0.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Ambientes. Cada uno tiene su propio applicationId, así los tres se instalan lado a lado
+    // en el mismo celular. dev y qa se compilan como debug; prod como release.
+    flavorDimensions += "ambiente"
+    productFlavors {
+        create("dev") {
+            dimension = "ambiente"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Finia DEV")
+        }
+        create("qa") {
+            dimension = "ambiente"
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            resValue("string", "app_name", "Finia QA")
+        }
+        create("prod") {
+            dimension = "ambiente"
+            resValue("string", "app_name", "Finia")
+        }
+    }
+
+    // Llave de firma de CI. Los secretos de cada ambiente de GitHub definen cuál es:
+    // la de pruebas para dev/qa y la de release para producción. Sin ellos (en local)
+    // debug usa la llave debug de siempre y release queda sin firmar.
+    val ciKeystore = providers.environmentVariable("FINIA_KEYSTORE_PATH").orNull
+    val ciSigning = ciKeystore?.let { path ->
+        signingConfigs.create("ci") {
+            storeFile = file(path)
+            storePassword = providers.environmentVariable("FINIA_KEYSTORE_PASSWORD").get()
+            keyAlias = providers.environmentVariable("FINIA_KEY_ALIAS").get()
+            keyPassword = providers.environmentVariable("FINIA_KEY_PASSWORD").get()
+        }
+    }
+
     buildTypes {
         debug {
+            if (ciSigning != null) signingConfig = ciSigning
             isMinifyEnabled = false
             isDebuggable = true
         }
         release {
+            if (ciSigning != null) signingConfig = ciSigning
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
@@ -50,6 +89,7 @@ android {
 
     buildFeatures {
         compose = true
+        resValues = true // app_name por ambiente
     }
 }
 
