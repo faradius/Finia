@@ -87,10 +87,15 @@ jobs:
         run: |
           echo "$FIREBASE_SA" > "$RUNNER_TEMP/firebase-sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          # El repo es público y sus logs también: se quitan los enlaces de descarga
+          # de la APK (traen token) que imprime firebase-tools. pipefail conserva el
+          # código de salida de firebase-tools si la subida falla.
+          set -o pipefail
           npx --yes firebase-tools@14 appdistribution:distribute "$APK" \
             --app "$FIREBASE_APP_ID" \
             --groups "$GRUPOS" \
-            --release-notes-file "$RUNNER_TEMP/notas.txt"
+            --release-notes-file "$RUNNER_TEMP/notas.txt" 2>&1 \
+            | sed -E '/app-binary-downloads|testerapps\//d'
 
       - name: GitHub Release (solo producción)
         if: steps.amb.outputs.nombre == 'produccion'
